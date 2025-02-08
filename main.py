@@ -14,6 +14,12 @@ class MainApplication:
 
         self.root.title("Quiz Application")
         self.root.geometry("400x300")
+
+        # Add a button to show users
+        users_button = tk.Button(self.root, text="Users", command=self.show_user_list, bg="#2196F3", fg="white",
+                                 font=("Helvetica", 12))
+        users_button.pack(pady=10)
+
         self.show_login_window()
         self.root.mainloop()
 
@@ -27,7 +33,10 @@ class MainApplication:
 
     def show_question_manager(self, user):
         self.clear_window()
-        QuestionManagerUI(self.root, self.question_manager)
+        QuestionManagerUI(self.root, self.question_manager, self.user_manager)  # Pass user_manager here
+
+    def show_user_list(self):
+        UserListWindow(self.root, self.user_manager)
 
     def clear_window(self):
         for widget in self.root.winfo_children():
@@ -120,8 +129,7 @@ class LoginWindow:
             messagebox.showerror("Error", "All fields are required.")
             return
 
-        self.user_manager.create_new_user(full_name, None, phone, password, age)
-        messagebox.showinfo("Success", "Registration successful!")
+        self.user_manager.create_new_user(full_name,phone, password, age)
         self.create_login_form()
 
 
@@ -170,8 +178,7 @@ class RegisterWindow:
             messagebox.showerror("Error", "All fields are required.")
             return
 
-        self.user_manager.create_new_user(full_name, None, phone, password, age)
-        messagebox.showinfo("Success", "Registration successful!")
+        self.user_manager.create_new_user(full_name,phone, password, age)
         self.back_to_login()
 
     def back_to_login(self):
@@ -179,9 +186,10 @@ class RegisterWindow:
 
 
 class QuestionManagerUI:
-    def __init__(self, master, question_manager):
+    def __init__(self, master, question_manager, user_manager):
         self.master = master
         self.question_manager = question_manager
+        self.user_manager = user_manager  # Store the user_manager
 
         self.master.title("Question Manager")
         self.master.geometry("600x400")
@@ -223,6 +231,18 @@ class QuestionManagerUI:
 
         self.view_button = tk.Button(button_frame, text="View Question", command=self.view_question, width=20)
         self.view_button.grid(row=0, column=3, padx=5, pady=5)
+
+        # Add Users Button
+        self.users_button = tk.Button(button_frame, text="Users", command=self.show_user_list, width=20)
+        self.users_button.grid(row=0, column=4, padx=5, pady=5)
+
+        # Add Ranks Button
+        self.ranks_button = tk.Button(button_frame, text="Ranks", command=self.show_ranks, width=20)
+        self.ranks_button.grid(row=0, column=5, padx=5, pady=5)
+
+        # Add Logout Button
+        self.logout_button = tk.Button(button_frame, text="Logout", command=self.logout_user, width=20)
+        self.logout_button.grid(row=0, column=6, padx=5, pady=5)
 
         self.load_questions()
 
@@ -266,6 +286,21 @@ class QuestionManagerUI:
                                     f"Title: {question[1]}\nOptions:\nA: {question[2]}\nB: {question[3]}\nC: {question[4]}\nD: {question[5]}\nCorrect Answer: {question[6]}")
         else:
             messagebox.showwarning("Warning", "Please select a question to view.")
+
+    def show_user_list(self):
+        UserListWindow(self.master, self.user_manager)
+
+    def show_ranks(self):
+        # Functionality to show ranks can be implemented here
+        messagebox.showinfo("Ranks", "Show ranks functionality is not yet implemented.")
+
+    def logout_user(self):
+        # Implement your logout functionality here
+        messagebox.showinfo("Logout", "You have been logged out.")
+        self.master.destroy()  # Close the application or redirect to login
+
+    def show_ranks(self):
+        RanksWindow(self.master, self.user_manager)
 
 
 class CreateQuestionWindow:
@@ -393,23 +428,27 @@ class UserListWindow:
         self.master = master
         self.user_manager = user_manager
 
-        self.master.title("User List")
-        self.master.geometry("600x400")
-        self.master.configure(bg="#f0f0f0")
+        # Create a Toplevel window for the modal
+        self.top = tk.Toplevel(master)
+        self.top.title("User List")
+        self.top.geometry("700x400")  # Adjusted width for additional column
+        self.top.grab_set()  # Make this window modal
+        self.top.focus_set()  # Focus on this window
 
-        title_label = tk.Label(master, text="Registered Users", font=("Helvetica", 20), bg="#f0f0f0")
+        title_label = tk.Label(self.top, text="Registered Users", font=("Helvetica", 20), bg="#f0f0f0")
         title_label.pack(pady=10)
 
-        self.frame = tk.Frame(master, bg="#ffffff", bd=2, relief=tk.GROOVE)
+        self.frame = tk.Frame(self.top, bg="#ffffff", bd=2, relief=tk.GROOVE)
         self.frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-        # Treeview for displaying users
-        self.tree = ttk.Treeview(self.frame, columns=('Full Name', 'Phone', 'Age', 'Register Date', 'Role'), show='headings')
-        self.tree.heading('Full Name', text='Full Name')
-        self.tree.heading('Phone', text='Phone')
-        self.tree.heading('Age', text='Age')
-        self.tree.heading('Register Date', text='Register Date')
-        self.tree.heading('Role', text='Role')
+        # Treeview for displaying users, including Role column
+        self.tree = ttk.Treeview(self.frame, columns=('Full Name',  'Role', 'Phone', 'Age', 'Register Date'), show='headings')
+
+        # Center-aligning all columns
+        for col in self.tree['columns']:
+            self.tree.heading(col, text=col, anchor='center')
+            self.tree.column(col, anchor='center')  # Set the column anchor to center
+
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Scrollbar
@@ -419,13 +458,68 @@ class UserListWindow:
 
         self.load_users()
 
+        # Add a button to close the modal
+        close_button = tk.Button(self.top, text="Close", command=self.top.destroy, bg="#FF5722", fg="white", font=("Helvetica", 12))
+        close_button.pack(pady=10)
+
     def load_users(self):
         for row in self.tree.get_children():
             self.tree.delete(row)
 
         users = self.user_manager.user_list()
         for user in users:
+            # Assuming user is a tuple of (full_name, phone, age, register_date, role)
             self.tree.insert('', 'end', values=user)
+
+
+class RanksWindow:
+    def __init__(self, master, user_manager):
+        self.master = master
+        self.user_manager = user_manager
+
+        # Create a Toplevel window for the modal
+        self.top = tk.Toplevel(master)
+        self.top.title("User Ranks")
+        self.top.geometry("400x300")  # Adjust width and height as needed
+        self.top.grab_set()  # Make this window modal
+        self.top.focus_set()  # Focus on this window
+
+        title_label = tk.Label(self.top, text="User Ranks", font=("Helvetica", 16))
+        title_label.pack(pady=10)
+
+        self.frame = tk.Frame(self.top)
+        self.frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        # Treeview for displaying ranks
+        self.tree = ttk.Treeview(self.frame, columns=('Rank', 'Full Name', 'Score'), show='headings')
+
+        # Center-aligning columns
+        for col in self.tree['columns']:
+            self.tree.heading(col, text=col, anchor='center')
+            self.tree.column(col, anchor='center')  # Center-align the column
+
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Scrollbar
+        self.scrollbar = ttk.Scrollbar(self.frame, orient='vertical', command=self.tree.yview)
+        self.scrollbar.pack(side=tk.RIGHT, fill='y')
+        self.tree.configure(yscrollcommand=self.scrollbar.set)
+
+        self.load_ranks()
+
+        # Add a button to close the modal
+        close_button = tk.Button(self.top, text="Close", command=self.top.destroy, bg="#FF5722", fg="white", font=("Helvetica", 12))
+        close_button.pack(pady=10)
+
+    def load_ranks(self):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        ranks = self.user_manager.find_rank()
+        if ranks:
+            for index, rank in enumerate(ranks, start=1):  # Start from 1 for ranking
+                # Assuming rank is a tuple of (full_name, score, user_id)
+                self.tree.insert('', 'end', values=(index, rank[0], rank[1]))  # Insert rank number, full name, and score
 
 
 if __name__ == "__main__":

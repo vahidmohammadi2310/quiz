@@ -9,10 +9,10 @@ class User:
     def user_list(self):
         try:
             query = """
-                select users.full_name, users.phone, users.age, users.register_date, roles.title
+                select users.full_name, users.phone, users.age, users.register_date, roles.title as role
                 from users
                 left join roles
-                    on user.role_id = roles.id
+                    on users.role_id = roles.id
             """
             cursor = self.connection.cursor()
             cursor.execute(query)
@@ -67,5 +67,21 @@ class User:
             return result
         except Exception as e:
             messagebox.showerror("Error", f"Failed to find user: {e}")
+        finally:
+            cursor.close()
+
+    def find_rank(self):
+        try:
+            query = """
+                select users.full_name as full_name, user_rank.score as score, user_rank.user_id
+                from user_rank
+                left join users
+                    on user_rank.user_id = users.id
+            """
+            cursor = self.connection.cursor()
+            cursor.execute(query)
+            return cursor.fetchall()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to fetch question: {e}")
         finally:
             cursor.close()
