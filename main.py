@@ -33,7 +33,7 @@ class MainApplication:
 
     def show_question_manager(self, user):
         self.clear_window()
-        QuestionManagerUI(self.root, self.question_manager, self.user_manager)  # Pass user_manager here
+        QuestionManagerUI(self.root, self.question_manager, self.user_manager, user)  # Pass the logged-in user here
 
     def show_user_list(self):
         UserListWindow(self.root, self.user_manager)
@@ -54,13 +54,15 @@ class LoginWindow:
         self.frame = tk.Frame(master, bg="#ffffff", padx=20, pady=20)
         self.frame.pack(expand=True)
 
-        self.create_login_form()
+        # Call the method to create the login form
+        self.create_login_form()  # This method is now defined before it's called
 
     def create_login_form(self):
         # Clear the frame
         for widget in self.frame.winfo_children():
             widget.destroy()
 
+        # Add login form widgets
         tk.Label(self.frame, text="Login", font=("Helvetica", 24, 'bold'), bg="#ffffff").pack(pady=10)
 
         tk.Label(self.frame, text="Phone:", bg="#ffffff", font=("Helvetica", 12)).pack(pady=5)
@@ -83,6 +85,7 @@ class LoginWindow:
         for widget in self.frame.winfo_children():
             widget.destroy()
 
+        # Add registration form widgets
         tk.Label(self.frame, text="Register", font=("Helvetica", 24, 'bold'), bg="#ffffff").pack(pady=10)
 
         tk.Label(self.frame, text="Full Name:", bg="#ffffff", font=("Helvetica", 12)).pack(pady=5)
@@ -115,7 +118,7 @@ class LoginWindow:
 
         if user:
             messagebox.showinfo("Success", "Login successful!")
-            self.login_success_callback(user)
+            self.login_success_callback(user)  # Pass the logged-in user to the callback
         else:
             messagebox.showerror("Error", "Invalid phone or password.")
 
@@ -129,8 +132,8 @@ class LoginWindow:
             messagebox.showerror("Error", "All fields are required.")
             return
 
-        self.user_manager.create_new_user(full_name,phone, password, age)
-        self.create_login_form()
+        self.user_manager.create_new_user(full_name, phone, password, age)
+        self.create_login_form()  # Switch back to the login form after registration
 
 
 class RegisterWindow:
@@ -186,10 +189,11 @@ class RegisterWindow:
 
 
 class QuestionManagerUI:
-    def __init__(self, master, question_manager, user_manager):
+    def __init__(self, master, question_manager, user_manager, user):
         self.master = master
         self.question_manager = question_manager
-        self.user_manager = user_manager  # Store the user_manager
+        self.user_manager = user_manager
+        self.user = user  # Store the logged-in user
 
         self.master.title("Question Manager")
         self.master.geometry("600x400")
@@ -244,9 +248,19 @@ class QuestionManagerUI:
         self.logout_button = tk.Button(button_frame, text="Logout", command=self.logout_user, width=20)
         self.logout_button.grid(row=0, column=6, padx=5, pady=5)
 
+        # Add Answer Question Button (Only for participants)
+        if self.user[5] == 2:  # Assuming role is stored in the 6th index of the user tuple
+            self.answer_button = tk.Button(button_frame, text="Answer Question", command=self.answer_question, width=20)
+            self.answer_button.grid(row=0, column=7, padx=5, pady=5)
+
         self.load_questions()
 
+    def create_question(self):
+        """Open the CreateQuestionWindow to add a new question."""
+        CreateQuestionWindow(self.master, self.question_manager, self.load_questions)
+
     def load_questions(self):
+        """Load questions from the database and display them in the Treeview."""
         for row in self.tree.get_children():
             self.tree.delete(row)
 
@@ -254,10 +268,8 @@ class QuestionManagerUI:
         for question in questions:
             self.tree.insert('', 'end', values=(question[0], question[1]))
 
-    def create_question(self):
-        CreateQuestionWindow(self.master, self.question_manager, self.load_questions)
-
     def edit_question(self):
+        """Open the UpdateQuestionWindow to edit the selected question."""
         selected_item = self.tree.selection()
         if selected_item:
             question_id = self.tree.item(selected_item)['values'][0]
@@ -268,6 +280,7 @@ class QuestionManagerUI:
             messagebox.showwarning("Warning", "Please select a question to edit.")
 
     def remove_question(self):
+        """Remove the selected question from the database."""
         selected_item = self.tree.selection()
         if selected_item:
             question_id = self.tree.item(selected_item)['values'][0]
@@ -277,30 +290,151 @@ class QuestionManagerUI:
             messagebox.showwarning("Warning", "Please select a question to remove.")
 
     def view_question(self):
+        """Display details of the selected question."""
         selected_item = self.tree.selection()
         if selected_item:
             question_id = self.tree.item(selected_item)['values'][0]
             question = self.question_manager.show_question(question_id)
             if question:
-                messagebox.showinfo("Question Details",
-                                    f"Title: {question[1]}\nOptions:\nA: {question[2]}\nB: {question[3]}\nC: {question[4]}\nD: {question[5]}\nCorrect Answer: {question[6]}")
+                messagebox.showinfo("Question Details", f"Title: {question[1]}\nOption A: {question[2]}\nOption B: {question[3]}\nOption C: {question[4]}\nOption D: {question[5]}\nCorrect Answer: {question[6]}")
         else:
             messagebox.showwarning("Warning", "Please select a question to view.")
 
     def show_user_list(self):
+        """Open the UserListWindow to display all users."""
         UserListWindow(self.master, self.user_manager)
 
     def show_ranks(self):
-        # Functionality to show ranks can be implemented here
-        messagebox.showinfo("Ranks", "Show ranks functionality is not yet implemented.")
+        """Open the RanksWindow to display user ranks."""
+        RanksWindow(self.master, self.user_manager)
 
     def logout_user(self):
-        # Implement your logout functionality here
-        messagebox.showinfo("Logout", "You have been logged out.")
-        self.master.destroy()  # Close the application or redirect to login
+        """Log out the current user and return to the login window."""
+        self.master.destroy()
+        MainApplication(self.user_manager.connection)
 
-    def show_ranks(self):
-        RanksWindow(self.master, self.user_manager)
+    def answer_question(self):
+        """Open the AnswerQuestionWindow for participants to answer questions."""
+        questions = self.question_manager.get_all_questions()  # Fetch all questions
+        if questions:
+            AnswerQuestionWindow(self.master, self.question_manager, self.user, questions)
+        else:
+            messagebox.showwarning("Warning", "No questions available to answer.")
+
+
+class AnswerQuestionWindow:
+    def __init__(self, master, question_manager, user, questions):
+        self.master = master
+        self.question_manager = question_manager
+        self.user = user
+        self.questions = questions
+        self.current_question_index = 0
+        self.answers = []
+
+        # Create a modal window with better styling
+        self.top = tk.Toplevel(master)
+        self.top.title("Answer Questions")
+        self.top.geometry("600x450")
+        self.top.configure(bg="#f5f5f5")
+        self.top.grab_set()
+        self.top.focus_set()
+
+        # Create main container with padding
+        self.main_frame = tk.Frame(self.top, bg="white", highlightbackground="#e0e0e0", highlightthickness=1)
+        self.main_frame.pack(padx=20, pady=20, fill="both", expand=True)
+
+        # Question Title with better styling
+        self.question_label = tk.Label(self.main_frame, text="", font=("Helvetica", 16, "bold"), bg="white",
+                                       wraplength=500)
+        self.question_label.pack(pady=15, fill="x")
+
+        # Options frame with better spacing
+        self.options_frame = tk.Frame(self.main_frame, bg="white")
+        self.options_frame.pack(pady=15, fill="x")
+
+        # Radio buttons with improved styling
+        self.option_var = tk.StringVar(value="")
+        self.option_a = tk.Radiobutton(self.options_frame, text="", variable=self.option_var, value="opa",
+                                       font=("Helvetica", 12), bg="white", anchor="w", selectcolor="white")
+        self.option_a.pack(anchor='w', fill="x", padx=10, pady=5)
+
+        self.option_b = tk.Radiobutton(self.options_frame, text="", variable=self.option_var, value="opb",
+                                       font=("Helvetica", 12), bg="white", anchor="w", selectcolor="white")
+        self.option_b.pack(anchor='w', fill="x", padx=10, pady=5)
+
+        self.option_c = tk.Radiobutton(self.options_frame, text="", variable=self.option_var, value="opc",
+                                       font=("Helvetica", 12), bg="white", anchor="w", selectcolor="white")
+        self.option_c.pack(anchor='w', fill="x", padx=10, pady=5)
+
+        self.option_d = tk.Radiobutton(self.options_frame, text="", variable=self.option_var, value="opd",
+                                       font=("Helvetica", 12), bg="white", anchor="w", selectcolor="white")
+        self.option_d.pack(anchor='w', fill="x", padx=10, pady=5)
+
+        # Navigation Buttons with improved styling
+        self.button_frame = tk.Frame(self.main_frame, bg="white")
+        self.button_frame.pack(pady=15, fill="x")
+
+        self.previous_button = tk.Button(self.button_frame, text="Previous", command=self.previous_question,
+                                         bg="#2196F3", fg="white", font=("Helvetica", 12, "bold"),
+                                         state=tk.DISABLED, padx=10, pady=5)
+        self.previous_button.pack(side=tk.LEFT, fill="x", expand=True, padx=5)
+
+        self.next_button = tk.Button(self.button_frame, text="Next", command=self.next_question,
+                                     bg="#4CAF50", fg="white", font=("Helvetica", 12, "bold"),
+                                     padx=10, pady=5)
+        self.next_button.pack(side=tk.LEFT, fill="x", expand=True, padx=5)
+
+        # Submit Button with improved styling
+        self.submit_button = tk.Button(self.main_frame, text="Submit", command=self.submit_answers,
+                                       bg="#9C27B0", fg="white", font=("Helvetica", 12, "bold"),
+                                       state=tk.DISABLED, padx=10, pady=5)
+        self.submit_button.pack(pady=15, fill="x")
+
+        self.load_question()
+
+    def load_question(self):
+        if self.current_question_index < len(self.questions):
+            question = self.questions[self.current_question_index]
+            self.question_label.config(text=question[1])
+
+            # Clear any previous selection
+            self.option_var.set("")
+
+            # Update options with better formatting
+            self.option_a.config(text=f"A) {question[2]}")
+            self.option_b.config(text=f"B) {question[3]}")
+            self.option_c.config(text=f"C) {question[4]}")
+            self.option_d.config(text=f"D) {question[5]}")
+
+            # Update button states
+            self.previous_button.config(state=tk.NORMAL if self.current_question_index > 0 else tk.DISABLED)
+            self.next_button.config(
+                state=tk.NORMAL if self.current_question_index < len(self.questions) - 1 else tk.DISABLED)
+            self.submit_button.config(
+                state=tk.NORMAL if self.current_question_index == len(self.questions) - 1 else tk.DISABLED)
+        else:
+            self.top.destroy()
+
+    def next_question(self):
+        self.save_answer()
+        self.current_question_index += 1
+        self.load_question()
+
+    def previous_question(self):
+        self.current_question_index -= 1
+        self.load_question()
+
+    def save_answer(self):
+        selected_option = self.option_var.get()
+        if selected_option:
+            question_id = self.questions[self.current_question_index][0]
+            self.answers.append((question_id, selected_option))
+
+    def submit_answers(self):
+        self.save_answer()
+        print("Answers submitted:", self.answers)
+        messagebox.showinfo("Success", "Your answers have been submitted!")
+        self.top.destroy()
 
 
 class CreateQuestionWindow:
