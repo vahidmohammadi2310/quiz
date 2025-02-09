@@ -101,3 +101,23 @@ class User:
             messagebox.showerror("Error", f"Failed to fetch question: {e}")
         finally:
             cursor.close()
+
+    def user_rank(self, user_id):
+        try:
+            result = None
+            query = """
+                select id
+                from user_rank
+                where user_id = %s
+            """
+            cursor = self.connection.cursor()
+            cursor.execute(query, (user_id,))
+            rank = cursor.fetchone()
+            if rank:
+                result = rank
+            return result
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to find rank: {e}")
+        finally:
+            cursor.close()
+
