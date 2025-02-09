@@ -77,10 +77,26 @@ class User:
                 from user_rank
                 left join users
                     on user_rank.user_id = users.id
+                order by user_rank.score desc, users.full_name
             """
             cursor = self.connection.cursor()
             cursor.execute(query)
             return cursor.fetchall()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to fetch question: {e}")
+        finally:
+            cursor.close()
+
+    def update_score(self, score, user_id):
+
+        try:
+            query = """
+                insert into user_rank (user_id, score)
+                values (%s, %s)
+            """
+            cursor = self.connection.cursor()
+            cursor.execute(query, (user_id, score))
+            self.connection.commit()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to fetch question: {e}")
         finally:

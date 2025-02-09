@@ -82,3 +82,11 @@ class Question:
         finally:
             cursor.close()
 
+    def calculate_score(self, answers):
+        questions = self.get_all_questions()
+        score = 0
+        for question in questions:
+            for answer in answers:
+                if question[0] == answer[0] and question[6] == answer[1]:
+                    score += 1
+        return score

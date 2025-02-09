@@ -27,7 +27,6 @@ create table if not exists user_rank(
     id int auto_increment primary key,
     user_id int,
     score int not null,
-    rank int not null,
     foreign key (user_id) references users(id)
 );
 insert into roles(title)

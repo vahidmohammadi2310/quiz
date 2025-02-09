@@ -207,7 +207,7 @@ class QuestionManagerUI:
         self.frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
         # Treeview for displaying questions
-        self.tree = ttk.Treeview(self.frame, columns=('ID', 'Title'), show='headings')
+        self.tree = ttk.Treeview(self.frame, columns=('ID', 'Title'), show='headings', selectmode='browse')
         self.tree.heading('ID', text='ID')
         self.tree.heading('Title', text='Question Title')
         self.tree.column('ID', width=50)
@@ -317,17 +317,18 @@ class QuestionManagerUI:
         """Open the AnswerQuestionWindow for participants to answer questions."""
         questions = self.question_manager.get_all_questions()  # Fetch all questions
         if questions:
-            AnswerQuestionWindow(self.master, self.question_manager, self.user, questions)
+            AnswerQuestionWindow(self.master, self.question_manager, self.user, questions, self.user_manager)
         else:
             messagebox.showwarning("Warning", "No questions available to answer.")
 
 
 class AnswerQuestionWindow:
-    def __init__(self, master, question_manager, user, questions):
+    def __init__(self, master, question_manager, user, questions, user_manager):
         self.master = master
         self.question_manager = question_manager
         self.user = user
         self.questions = questions
+        self.user_manager = user_manager
         self.current_question_index = 0
         self.answers = []
 
@@ -432,7 +433,8 @@ class AnswerQuestionWindow:
 
     def submit_answers(self):
         self.save_answer()
-        print("Answers submitted:", self.answers)
+        score = self.question_manager.calculate_score(self.answers)
+        self.user_manager.update_score(score, self.user[0])
         messagebox.showinfo("Success", "Your answers have been submitted!")
         self.top.destroy()
 
