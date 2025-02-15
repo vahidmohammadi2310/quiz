@@ -16,9 +16,9 @@ class MainApplication:
         self.root.geometry("400x300")
 
         # Add a button to show users
-        users_button = tk.Button(self.root, text="Users", command=self.show_user_list, bg="#2196F3", fg="white",
-                                 font=("Helvetica", 12))
-        users_button.pack(pady=10)
+        # users_button = tk.Button(self.root, text="Users", command=self.show_user_list, bg="#2196F3", fg="white",
+        #                          font=("Helvetica", 12))
+        # users_button.pack(pady=10)
 
         self.show_login_window()
         self.root.mainloop()
@@ -248,12 +248,20 @@ class QuestionManagerUI:
         self.logout_button = tk.Button(button_frame, text="Logout", command=self.logout_user, width=20)
         self.logout_button.grid(row=0, column=6, padx=5, pady=5)
 
+        self.update_password_button = tk.Button(button_frame, text="Update Password", command=self.show_update_password_window, width=20)
+        self.update_password_button.grid(row=0, column=7, padx=5, pady=5)
+
         # Add Answer Question Button (Only for participants)
         if self.user[5] == 2:  # Assuming role is stored in the 6th index of the user tuple
             self.answer_button = tk.Button(button_frame, text="Answer Question", command=self.answer_question, width=20)
             self.answer_button.grid(row=0, column=7, padx=5, pady=5)
 
         self.load_questions()
+
+
+    def show_update_password_window(self):
+        """Open a new window to update the user's password."""
+        UpdatePasswordWindow(self.master, self.user_manager, self.user[0])  # Pass the user_id
 
     def create_question(self):
         """Open the CreateQuestionWindow to add a new question."""
@@ -321,6 +329,44 @@ class QuestionManagerUI:
         else:
             messagebox.showwarning("Warning", "No questions available to answer.")
 
+
+class UpdatePasswordWindow:
+    def __init__(self, master, user_manager, user_id):
+        self.master = master
+        self.user_manager = user_manager
+        self.user_id = user_id
+
+        # Create a Toplevel window for the modal
+        self.top = tk.Toplevel(master)
+        self.top.title("Update Password")
+        self.top.geometry("300x150")
+        self.top.grab_set()  # Make this window modal
+        self.top.focus_set()  # Focus on this window
+
+        # Create a frame for styling
+        self.frame = tk.Frame(self.top, bg="#ffffff", padx=20, pady=20)
+        self.frame.pack(expand=True)
+
+        # Add widgets for updating password
+        tk.Label(self.frame, text="New Password:", bg="#ffffff", font=("Helvetica", 12)).pack(pady=5)
+        self.new_password_entry = tk.Entry(self.frame, show='*', width=20, font=("Helvetica", 12))
+        self.new_password_entry.pack(pady=5)
+
+        # Submit Button
+        submit_button = tk.Button(self.frame, text="Update Password", command=self.update_password, bg="#4CAF50", fg="white", font=("Helvetica", 12))
+        submit_button.pack(pady=10)
+
+    def update_password(self):
+        """Update the user's password."""
+        new_password = self.new_password_entry.get()
+
+        if not new_password:
+            messagebox.showerror("Error", "Please enter a new password.")
+            return
+
+        self.user_manager.update_password(new_password, self.user_id)
+        messagebox.showinfo("Success", "Password updated successfully!")
+        self.top.destroy()
 
 class AnswerQuestionWindow:
     def __init__(self, master, question_manager, user, questions, user_manager):
